@@ -1,0 +1,19 @@
+{
+  "name": "flow-node",
+  "version": "1.0.0",
+  "description": "experimental express 4 flow.js server-side component(s)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:electblake/flowjs-node.git"
+  },
+  "author": "electblake <electblake@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/electblake/flowjs-node/issues"
+  },
+  "homepage": "https://github.com/electblake/flowjs-node"
+}
