@@ -2,6 +2,7 @@ var fs = require('fs'),
     path = require('path'),
     util = require('util'),
     Stream = require('stream').Stream,
+    debug = require('debug')('express:flowjs'),
     ensureDir = require('ensureDir');
 
 module.exports = flow = function(temporaryFolder) {
@@ -11,14 +12,14 @@ module.exports = flow = function(temporaryFolder) {
     $.fileParameterName = 'file';
     
     temporaryFolder = path.resolve(__dirname+'', '../../', temporaryFolder);
-    console.log('--- temporaryFolder', temporaryFolder);
+    debug('use tmp folder', temporaryFolder);
 
     ensureDir($.temporaryFolder, '0775', function (err) {
         if (err) {
-            console.log('--- tmp folder error', e);
+            debug(e);
             throw e;
         } else {
-            console.log('--- tmp folder', true);
+            debug('folder confirmed', temporaryFolder);
         }
     });
 
@@ -130,7 +131,7 @@ module.exports = flow = function(temporaryFolder) {
             fs.rename(files[$.fileParameterName].path, chunkFilename, function(err) {
 
                 if (err) {
-                    console.log('--- rename error', err);
+                    debug('rename error', err);
                 } else {
                     // Do we have all the chunks?
                     var currentTestChunk = 1;
@@ -215,7 +216,7 @@ module.exports = flow = function(temporaryFolder) {
             fs.exists(chunkFilename, function(exists) {
                 if (exists) {
 
-                    console.log('exist removing ', chunkFilename);
+                    debug('exist removing ', chunkFilename);
                     fs.unlink(chunkFilename, function(err) {
                         if (options.onError) options.onError(err);
                     });
