@@ -1,6 +1,6 @@
 {
   "name": "flowjs-express",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "experimental express 4 flow.js server-side component(s)",
   "main": "index.js",
   "scripts": {
