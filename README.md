@@ -6,22 +6,23 @@ code snippet to start with, not that you probably can't copy paste - read it ove
 
 
 ```
-router.post('/:artwork_id', function(req, res, next) {
-	flow.post(req, function(status, filename, original_filename, identifier) {
-		var chunkNumber = req.body.flowChunkNumber,
-			totalChunks = req.body.flowTotalChunks;
-
-        var s = fs.createWriteStream(req.artwork.savePath);
-        s.on('finish', function() {
-        	console.log('-- finished (' + chunkNumber + ')', totalChunks);
-           	if (chunkNumber === totalChunks) {
-           		console.log('-- next (' + chunkNumber + ')', totalChunks);
-                next();
-            } else {
-            	res.status(200).send();
-            }
-        });
-        flow.write(identifier, s, {end: true});
-	}
+var savePath = './';
+router.post('/:save_id', function(req, res, next) {
+  flow.post(req, function(status, filename, original_filename, identifier) {
+    var chunkNumber = req.body.flowChunkNumber,
+    	totalChunks = req.body.flowTotalChunks;
+    	
+	var s = fs.createWriteStream(savePath);
+	s.on('finish', function() {
+		console.log('-- finished (' + chunkNumber + ')', totalChunks);
+		if (chunkNumber === totalChunks) {
+			console.log('-- next (' + chunkNumber + ')', totalChunks);
+			next();
+		} else {
+			res.status(200).send();
+		}
+	});
+    flow.write(identifier, s, {end: true});
+  });
 });
 ```
