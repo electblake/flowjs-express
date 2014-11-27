@@ -1,6 +1,6 @@
 {
   "name": "flowjs-express",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "description": "experimental express 4 flow.js server-side component(s)",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,6 @@
   "homepage": "https://github.com/electblake/flowjs-node",
   "dependencies": {
     "ensureDir": "^1.0.6",
-    "stream": "0.0.1",
     "debug": "^1.0.4"
   }
 }

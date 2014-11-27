@@ -1,7 +1,6 @@
 var fs = require('fs'),
     path = require('path'),
-    util = require('util'),
-    Stream = require('stream').Stream,
+    // Stream = require('stream').Stream,
     debug = require('debug')('express:flowjs'),
     ensureDir = require('ensureDir');
 
@@ -11,7 +10,7 @@ module.exports = flow = function(temporaryFolder) {
     $.maxFileSize = null;
     $.fileParameterName = 'file';
     
-    temporaryFolder = path.resolve(__dirname+'', '../../', temporaryFolder);
+    temporaryFolder = path.resolve(__dirname + '', '../../', temporaryFolder);
     debug('use tmp folder', temporaryFolder);
 
     ensureDir($.temporaryFolder, '0775', function (err) {
