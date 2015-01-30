@@ -6,23 +6,33 @@ code snippet to start with, not that you probably can't copy paste - read it ove
 
 
 ```
-var savePath = './';
-router.post('/:save_id', function(req, res, next) {
-  flow.post(req, function(status, filename, original_filename, identifier) {
-    var chunkNumber = req.body.flowChunkNumber,
-    	totalChunks = req.body.flowTotalChunks;
-    	
-	var s = fs.createWriteStream(savePath);
-	s.on('finish', function() {
-		console.log('-- finished (' + chunkNumber + ')', totalChunks);
-		if (chunkNumber === totalChunks) {
-			console.log('-- next (' + chunkNumber + ')', totalChunks);
-			next();
-		} else {
-			res.status(200).send();
-		}
-	});
-    flow.write(identifier, s, {end: true});
-  });
+var temporaryFolder = path.resolve(path.join('./', 'uploads-tmp'));
+var flow = require('flowjs-express')(temporaryFolder);
+var saveFolder = path.resolve(path.join('./', 'uploads'));
+
+app.post('/uploads', flow.post, function(req, res, next) {
+	log.debug('req.flow.status', req.flow.status);
+	if (req.flow.status === 'done') {
+
+		// req.flow is populated with great info
+		console.log('Upload Done', req.flow);
+		
+		var file_ext = path.extname(req.flow.filename);
+		var save_path = path.join(saveFolder, 'custom-name' + file_ext);
+
+	    var saveStream = fs.createWriteStream(save_path);
+	    flow.write(req.flow.identifier, saveStream);
+
+	    saveStream.on('finish', function() {
+	    	// file is finished writing
+	    	res.send(save_path);
+
+	    }).on('error', function(err) {
+	    	res.sendStatus(400);
+	    });
+
+	} else {
+		res.sendStatus(200);
+	}
 });
 ```
