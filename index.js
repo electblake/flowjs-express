@@ -1,26 +1,17 @@
-var fs = require('fs'),
-    path = require('path'),
-    // Stream = require('stream').Stream,
-    debug = require('debug')('express:flowjs'),
-    ensureDir = require('ensureDir');
-
+var fs = require('fs-extra'),
+    path = require('path');
+/**
+ * [flow description]
+ * @param string temporaryFolder full path to tmp folder
+ * @return {[type]}
+ */
 module.exports = flow = function(temporaryFolder) {
     var $ = this;
     $.temporaryFolder = temporaryFolder;
     $.maxFileSize = null;
     $.fileParameterName = 'file';
     
-    temporaryFolder = path.resolve(__dirname + '', '../../', temporaryFolder);
-    debug('use tmp folder', temporaryFolder);
-
-    ensureDir($.temporaryFolder, '0775', function (err) {
-        if (err) {
-            debug(e);
-            throw e;
-        } else {
-            debug('folder confirmed', temporaryFolder);
-        }
-    });
+    fs.ensureDir($.temporaryFolder);
 
     function cleanIdentifier(identifier) {
         return identifier.replace(/[^0-9A-Za-z_-]/g, '');
@@ -69,34 +60,58 @@ module.exports = flow = function(temporaryFolder) {
         return 'valid';
     }
 
+    /**
+     * GET flow middleware
+     * req.flow.status
+     *  - found
+     *  - not_found
+     */
     //'found', filename, original_filename, identifier
     //'not_found', null, null, null
-    $.get = function(req, callback) {
+    $.get = function(req, res, next) {
         var chunkNumber = req.param('flowChunkNumber', 0);
         var chunkSize = req.param('flowChunkSize', 0);
         var totalSize = req.param('flowTotalSize', 0);
         var identifier = req.param('flowIdentifier', "");
         var filename = req.param('flowFilename', "");
 
+        req.flow = {
+            status: null,
+            identifier: identifier,
+            filename: filename,
+            chunkNumber: chunkNumber,
+            chunkSize: chunkSize,
+            totalSize: totalSize
+        };
+
         if (validateRequest(chunkNumber, chunkSize, totalSize, identifier, filename) == 'valid') {
             var chunkFilename = getChunkFilename(chunkNumber, identifier);
             fs.exists(chunkFilename, function(exists) {
                 if (exists) {
-                    callback('found', chunkFilename, filename, identifier);
+                    req.flow.status = 'found';
+                    next();
                 } else {
-                    callback('not_found', null, null, null);
+                    req.flow.status = 'not_found';
+                    next(new Error('not_found'));
                 }
             });
         } else {
-            callback('not_found', null, null, null);
+            req.flow.status = 'not_found';
+            next(new Error('not_found'));
         }
     };
 
-    //'partly_done', filename, original_filename, identifier
-    //'done', filename, original_filename, identifier
-    //'invalid_flow_request', null, null, null
-    //'non_flow_request', null, null, null
-    $.post = function(req, callback) {
+    /**
+     * POST flow middleware
+     * populates req.flow
+     * 
+     * req.flow.status
+     *  - partly_done
+     *  - done
+     *  - invalid_flow_request
+     *  - non_flow_request
+     */
+    $.post = function(req, res, next) {
 
         var fields = req.body;
         var files = req.files;
@@ -109,20 +124,33 @@ module.exports = flow = function(temporaryFolder) {
         var identifier = cleanIdentifier(fields['flowIdentifier']);
         var filename = fields['flowFilename'];
 
+        var numberOfChunks = Math.max(Math.floor(totalSize/(chunkSize*1.0)), 1);
+
+        req.flow = {
+            status: null,
+            identifier: identifier,
+            filename: filename,
+            chunkNumber: chunkNumber,
+            numberOfChunks: numberOfChunks,
+            chunkSize: chunkSize,
+            totalSize: totalSize,
+        };
+
         // console.log('-- flow.post fields', fields);
 
         // console.log('--- flow.post receiver chunk', chunkNumber);
 
         if (!files[$.fileParameterName] || !files[$.fileParameterName].size) {
-            callback('invalid_flow_request', null, null, null);
+            req.flow.status = 'invalid_flow_request';
+            next(new Error('invalid_flow_request'));
             return;
         }
 
-        var original_filename = files[$.fileParameterName]['originalFilename'];
-        var validation = validateRequest(chunkNumber, chunkSize, totalSize, identifier, filename, files[$.fileParameterName].size);
-        // console.log('--- flow.post validation', validation);
-        if (validation == 'valid') {
-            // console.log('--- flow chunk ('+chunkNumber+')', validation);
+        req.flow.original_filename = files[$.fileParameterName]['originalFilename'];
+        req.flow.validation = validateRequest(chunkNumber, chunkSize, totalSize, identifier, filename, files[$.fileParameterName].size);
+
+        if (req.flow.validation == 'valid') {
+
             var chunkFilename = getChunkFilename(chunkNumber, identifier);
 
             // console.log('-- moving upload', files[$.fileParameterName].path, chunkFilename);
@@ -130,18 +158,18 @@ module.exports = flow = function(temporaryFolder) {
             fs.rename(files[$.fileParameterName].path, chunkFilename, function(err) {
 
                 if (err) {
-                    debug('rename error', err);
+                    // debug('rename error', err);
                 } else {
                     // Do we have all the chunks?
                     var currentTestChunk = 1;
-                    var numberOfChunks = Math.max(Math.floor(totalSize/(chunkSize*1.0)), 1);
                     var testChunkExists = function() {
                         fs.exists(getChunkFilename(currentTestChunk, identifier), function(exists){
                             if(exists){
                                 currentTestChunk++;
                                 if(currentTestChunk>numberOfChunks) {
-                                   //Add currentTestChunk and numberOfChunks to the callback
-                                   callback('done', filename, original_filename, identifier, currentTestChunk, numberOfChunks);
+                                    req.flow.status = 'done';
+                                    req.flow.currentTestChunk = currentTestChunk;
+                                    next();
                                 } else {
                                    // Recursion
                                    testChunkExists();
@@ -149,8 +177,9 @@ module.exports = flow = function(temporaryFolder) {
                             } else {
 
                              //Add currentTestChunk and numberOfChunks to the callback
-
-                                callback('partly_done', filename, original_filename, identifier, currentTestChunk, numberOfChunks);
+                                req.flow.status = 'partly_done';
+                                req.flow.currentTestChunk = currentTestChunk;
+                                next();
                             }
                         });
                     }
@@ -158,7 +187,7 @@ module.exports = flow = function(temporaryFolder) {
                 }
             });
         } else {
-            callback(validation, filename, original_filename, identifier);
+            next(new Error(req.flow.validation));
         }
     };
 
@@ -203,29 +232,27 @@ module.exports = flow = function(temporaryFolder) {
         pipeChunk(1);
     };
 
-    $.clean = function(identifier, options) {
-        options = options || {};
-
+    $.clean = function(identifier, done) {
+        var options = options || {};
         // Iterate over each chunk
         var pipeChunkRm = function(number) {
 
             var chunkFilename = getChunkFilename(number, identifier);
-
-            //console.log('removing pipeChunkRm ', number, 'chunkFilename', chunkFilename);
             fs.exists(chunkFilename, function(exists) {
                 if (exists) {
-
-                    debug('exist removing ', chunkFilename);
                     fs.unlink(chunkFilename, function(err) {
-                        if (options.onError) options.onError(err);
+                        if (err) {
+                            if (done) {
+                                done(err);
+                            }
+                        } else {
+                            pipeChunkRm(number + 1);
+                        }
                     });
-
-                    pipeChunkRm(number + 1);
-
                 } else {
-
-                    if (options.onDone) options.onDone();
-
+                    if (done) {
+                        done(null);
+                    }
                 }
             });
         };
