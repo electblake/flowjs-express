@@ -1,6 +1,9 @@
 # FlowJS for Express
 
-**This module is experimental** - use at own risk - cobbled together from various online sources I've come across.
+https://travis-ci.org/electblake/flowjs-express.svg?branch=master
+
+## This module is experimental
+**use at own risk**
 
 Code snippet to start with, not that you probably can't copy paste - read it over until I get real documentation.
 
