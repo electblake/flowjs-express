@@ -1,6 +1,6 @@
 # FlowJS for Express
 
-https://travis-ci.org/electblake/flowjs-express.svg?branch=master
+![image](https://travis-ci.org/electblake/flowjs-express.svg?branch=master)
 
 ## This module is experimental
 **use at own risk**
